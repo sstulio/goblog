@@ -2,18 +2,13 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
 
-	"github.com/callistaenterprise/goblog/accountservice/dbclient"
-	"github.com/callistaenterprise/goblog/accountservice/model"
+	"github.com/callistaenterprise/goblog/quoteservice/model"
 	"github.com/gorilla/mux"
 )
-
-var DBClient dbclient.IBoltClient
 
 var isHealthy = true
 
@@ -26,55 +21,25 @@ func init() {
 	client.Transport = transport
 }
 
-func GetAccount(w http.ResponseWriter, r *http.Request) {
+func GetQuote(w http.ResponseWriter, r *http.Request) {
 
-	// Read the 'accountId' path parameter from the mux map
-	var accountId = mux.Vars(r)["accountId"]
-
-	// Read the account struct BoltDB
-	account, err := DBClient.QueryAccount(accountId)
-	account.ServedBy = getIP()
-
-	// If err, return a 404
-	if err != nil {
-		fmt.Println("Some error occured serving " + accountId + ": " + err.Error())
-		w.WriteHeader(http.StatusNotFound)
-		return
+	quote := model.Quote{
+		Text:     "Be or not to be",
+		Language: "English",
 	}
-
-	// NEW call the quotes-service
-	quote, err := getQuote()
-	if err == nil {
-		account.Quote = quote
-	}
+	quote.ServedBy = getIP()
 
 	// If found, marshal into JSON, write headers and content
-	data, _ := json.Marshal(account)
+	data, _ := json.Marshal(quote)
 	writeJsonResponse(w, http.StatusOK, data)
 }
 
-func getQuote() (model.Quote, error) {
-	req, _ := http.NewRequest("GET", "http://quoteservice:8080/quotes/", nil)
-	resp, err := client.Do(req)
-
-	if err == nil && resp.StatusCode == 200 {
-		quote := model.Quote{}
-		bytes, _ := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(bytes, &quote)
-		return quote, nil
-	}
-
-	return model.Quote{}, fmt.Errorf("Some error")
-}
-
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
-	// Since we're here, we already know that HTTP service is up. Let's just check the state of the boltdb connection
-	dbUp := DBClient.Check()
-	if dbUp && isHealthy {
+	if isHealthy {
 		data, _ := json.Marshal(healthCheckResponse{Status: "UP"})
 		writeJsonResponse(w, http.StatusOK, data)
 	} else {
-		data, _ := json.Marshal(healthCheckResponse{Status: "Database unaccessible"})
+		data, _ := json.Marshal(healthCheckResponse{Status: "Unavailable"})
 		writeJsonResponse(w, http.StatusServiceUnavailable, data)
 	}
 }
