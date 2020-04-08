@@ -19,10 +19,10 @@ spec:
         image: quoteservice:latest
         imagePullPolicy: Never
         ports:
-        - containerPort: 8080
+        - containerPort: 8081
         livenessProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 8081
             initialDelaySeconds: 3
             periodSeconds: 3

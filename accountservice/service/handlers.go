@@ -3,10 +3,11 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
+
+	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
 
 	"github.com/callistaenterprise/goblog/accountservice/dbclient"
 	"github.com/callistaenterprise/goblog/accountservice/model"
@@ -18,6 +19,11 @@ var DBClient dbclient.IBoltClient
 var isHealthy = true
 
 var client = &http.Client{}
+
+var fallbackQuote = model.Quote{
+	Language: "en",
+	ServedBy: "circuit-breaker",
+	Text:     "May the source be with you, always."}
 
 func init() {
 	var transport http.RoundTripper = &http.Transport{
@@ -43,28 +49,23 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// NEW call the quotes-service
-	quote, err := getQuote()
-	if err == nil {
-		account.Quote = quote
-	}
+	account.Quote = getQuote()
 
 	// If found, marshal into JSON, write headers and content
 	data, _ := json.Marshal(account)
 	writeJsonResponse(w, http.StatusOK, data)
 }
 
-func getQuote() (model.Quote, error) {
-	req, _ := http.NewRequest("GET", "http://quoteservice:8080/quotes/", nil)
-	resp, err := client.Do(req)
+func getQuote() model.Quote {
 
-	if err == nil && resp.StatusCode == 200 {
+	body, err := cb.CallUsingCircuitBreaker("quoteservice", "http://quoteservice:8081/quotes/", "GET")
+	if err == nil {
 		quote := model.Quote{}
-		bytes, _ := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(bytes, &quote)
-		return quote, nil
+		json.Unmarshal(body, &quote)
+		return quote
 	}
 
-	return model.Quote{}, fmt.Errorf("Some error")
+	return fallbackQuote
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
