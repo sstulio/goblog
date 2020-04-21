@@ -10,10 +10,13 @@ import (
 	"github.com/eapache/go-resiliency/retrier"
 )
 
+//Client http client
 var Client http.Client
 
+//RETRIES Number of retries
 var RETRIES = 3
 
+//ConfigureHystrix config histrix
 func ConfigureHystrix(commands []string) {
 
 	for _, command := range commands {
@@ -21,12 +24,13 @@ func ConfigureHystrix(commands []string) {
 			Timeout:                hystrix.DefaultTimeout,
 			MaxConcurrentRequests:  hystrix.DefaultMaxConcurrent,
 			ErrorPercentThreshold:  hystrix.DefaultErrorPercentThreshold,
-			RequestVolumeThreshold: hystrix.DefaultVolumeThreshold,
+			RequestVolumeThreshold: 3,
 			SleepWindow:            hystrix.DefaultSleepWindow,
 		})
 	}
 }
 
+//CallUsingCircuitBreaker call using circuit breaker
 func CallUsingCircuitBreaker(breakerName string, url string, method string) ([]byte, error) {
 	output := make(chan []byte, 1)
 	errors := hystrix.Go(breakerName, func() error {
@@ -34,11 +38,12 @@ func CallUsingCircuitBreaker(breakerName string, url string, method string) ([]b
 		req, _ := http.NewRequest(method, url, nil)
 		err := callWithRetries(req, output)
 
-		return err // For hystrix, forward the err from the retrier. It's nil if OK.
+		return err
 	}, func(err error) error {
-		fmt.Printf("In fallback function for breaker %v, error: %v \n", breakerName, err.Error())
 		circuit, _, _ := hystrix.GetCircuit(breakerName)
-		fmt.Printf("Circuit state is: %v \n", circuit.IsOpen())
+		if circuit.IsOpen() {
+			fmt.Printf("Circuit is Open!! \n")
+		}
 		return err
 	})
 
@@ -68,10 +73,8 @@ func callWithRetries(req *http.Request, output chan []byte) error {
 			}
 			return err
 		} else if err == nil {
-			err = fmt.Errorf("Status was %v \n", resp.StatusCode)
+			err = fmt.Errorf("status was %v", resp.StatusCode)
 		}
-
-		fmt.Printf("Retrier failed, attempt %v \n", attempt)
 
 		return err
 	})

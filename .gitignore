@@ -23,10 +23,5 @@ _testmain.go
 *.test
 *.prof
 
-accountservice/accountservice
-accountservice/accountservice-linux-amd64
-accountservice/accounts.db
-accountservice/healthchecker-linux-amd64
-
-healthchecker/healthchecker
-healthchecker/healthchecker-linux-amd64
+userservice/userservice
+userservice/users.db

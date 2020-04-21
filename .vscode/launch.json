@@ -5,20 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Account Service",
+            "name": "User Service",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${fileDirname}/../accountservice/main.go",
+            "program": "${fileDirname}/../userservice/main.go",
             "env": {},
             "args": []
         },
         {
-            "name": "Quote Service",
+            "name": "Product Service",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${fileDirname}/../quoteservice/main.go",
+            "program": "${fileDirname}/../productservice/main.go",
             "env": {},
             "args": []
         }
